@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    <link rel="stylesheet" type="text/css" href="../static/css/posts.css">
+{% endblock %}
+
+{% block title %}
+    All posts
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        {% if articles|length > 0 %}
+
+            {% for el in articles %}
+                <div class="news-post">
+                    <h2 class="post-title">{{ el.title|safe }}</h2>
+                    <p class="post-description">{{ el.intro }}</p>
+                    <p class="post-date"><b>Date: {{ el.date.date() }}</b></p>
+                    <a href="/posts/{{ el.id }}" class="read-more-btn">Open</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>We don't have articles on the site yet.</p>
+        {% endif %}
+    </div>
+{% endblock %}
