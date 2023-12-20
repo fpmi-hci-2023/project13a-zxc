@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.database.pvcName }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.database.serviceName }}
+spec:
+  selector:
+    app: {{ .Values.database.appname }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.ports.mysqlPort }}
+      targetPort: {{ .Values.ports.mysqlPort }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.database.dbname }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.database.appname }}
+  replicas: 1
+  serviceName: {{ .Values.database.container.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.database.appname }}
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - {{ .Values.backendFrontend.webname }}
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: {{ .Values.database.container.name }}
+          image: {{ .Values.database.container.image }}
+          imagePullPolicy: {{ .Values.database.container.imagePullPolicy }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-password-secret
+                  key: password
+          args:
+            - {{ .Values.database.container.args }}
+          ports:
+            - containerPort: {{ .Values.ports.mysqlPort }}
+          volumeMounts:
+            - name: {{ .Values.database.container.volumeName }}
+              mountPath: /var/lib/mysql
+      imagePullSecrets:
+        - name: regcred
+      volumes:
+        - name: {{ .Values.database.container.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.database.pvcName }}
